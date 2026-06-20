@@ -1,3 +1,5 @@
+import telegram
+print(telegram.__version__)
 from typing import Final
 from telegram import Update
 from telegram.ext import (
