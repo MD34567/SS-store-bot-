@@ -1,17 +1,14 @@
 import os
-from typing import Final
 from telegram import Update
 from telegram.ext import (
-    ApplicationBuilder,
+    Updater,
     CommandHandler,
-    ContextTypes,
+    CallbackContext,
 )
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 if not TOKEN:
     raise ValueError("No TELEGRAM_TOKEN found")
-
-BOT_USERNAME: Final = "@SS2_Store_bot"
 
 PRODUCTS = {
     "1": {"name": "Dresses", "price": 1200, "link": "https://t.me/FG33333333/3"},
@@ -29,28 +26,27 @@ PRODUCTS = {
 }
 
 user_carts = {}
-application = None
 
 def get_application():
-    global application
-    if application is None:
-        application = ApplicationBuilder().token(TOKEN).build()
-        application.add_handler(CommandHandler("start", start_command))
-        application.add_handler(CommandHandler("help", help_command))
-        application.add_handler(CommandHandler("products", products_command))
-        application.add_handler(CommandHandler("order", order_command))
-        application.add_handler(CommandHandler("cart", cart_command))
-        application.add_handler(CommandHandler("checkout", checkout_command))
-        application.add_error_handler(error)
-    return application
+    updater = Updater(token=TOKEN, use_context=True)
+    dp = updater.dispatcher
+    
+    dp.add_handler(CommandHandler("start", start_command))
+    dp.add_handler(CommandHandler("help", help_command))
+    dp.add_handler(CommandHandler("products", products_command))
+    dp.add_handler(CommandHandler("order", order_command))
+    dp.add_handler(CommandHandler("cart", cart_command))
+    dp.add_handler(CommandHandler("checkout", checkout_command))
+    dp.add_error_handler(error)
+    
+    return updater
 
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+def start_command(update: Update, context: CallbackContext):
+    update.message.reply_text(
         """
 🛍 Welcome to SS Store!
 
 Available Commands:
-
 /products - View products
 /order <id> - Add product to cart
 /cart - View your cart
@@ -59,11 +55,10 @@ Available Commands:
 """
     )
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+def help_command(update: Update, context: CallbackContext):
+    update.message.reply_text(
         """
 Need help?
-
 /products - View products
 /order <id> - Add item to cart
 /cart - View cart
@@ -71,53 +66,67 @@ Need help?
 """
     )
 
-async def products_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def products_command(update: Update, context: CallbackContext):
     message = "📦 Available Products:\n\n"
     for pid, product in PRODUCTS.items():
         message += f"{pid}. {product['name']} - {product['price']} ETB\n"
         if product['link']:
             message += f"   📸 {product['link']}\n"
     message += "\nUse /order <product_id>"
-    await update.message.reply_text(message)
+    update.message.reply_text(message)
 
-async def order_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def order_command(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
+    
     if len(context.args) == 0:
-        await update.message.reply_text("Usage: /order <product_id>")
+        update.message.reply_text("Usage: /order <product_id>")
         return
+    
     product_id = context.args[0]
+    
     if product_id not in PRODUCTS:
-        await update.message.reply_text("❌ Product not found.")
+        update.message.reply_text("❌ Product not found.")
         return
+    
     if user_id not in user_carts:
         user_carts[user_id] = []
+    
     user_carts[user_id].append(PRODUCTS[product_id])
-    await update.message.reply_text(f"✅ {PRODUCTS[product_id]['name']} added to cart.")
+    update.message.reply_text(f"✅ {PRODUCTS[product_id]['name']} added to cart.")
 
-async def cart_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def cart_command(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
+    
     if user_id not in user_carts or len(user_carts[user_id]) == 0:
-        await update.message.reply_text("🛒 Your cart is empty.")
+        update.message.reply_text("🛒 Your cart is empty.")
         return
+    
     total = 0
     message = "🛒 Your Cart:\n\n"
+    
     for item in user_carts[user_id]:
         message += f"{item['name']} - {item['price']} ETB\n"
         total += item["price"]
+    
     message += f"\n💰 Total: {total} ETB"
-    await update.message.reply_text(message)
+    update.message.reply_text(message)
 
-async def checkout_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def checkout_command(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
+    
     if user_id not in user_carts or len(user_carts[user_id]) == 0:
-        await update.message.reply_text("🛒 Your cart is empty.")
+        update.message.reply_text("🛒 Your cart is empty.")
         return
+    
     total = sum(item["price"] for item in user_carts[user_id])
     order_summary = ""
+    
     for item in user_carts[user_id]:
         order_summary += f"- {item['name']} ({item['price']} ETB)\n"
+    
     user_carts[user_id] = []
-    await update.message.reply_text(
+    
+    update.message.reply_text(
         f"""
 ✅ Order Placed Successfully!
 
@@ -130,10 +139,5 @@ Thank you for shopping with SS Store.
 """
     )
 
-async def error(update: object, context: ContextTypes.DEFAULT_TYPE):
+def error(update, context):
     print(f"Update {update} caused error {context.error}")
-
-def run_bot():
-    app = get_application()
-    print("SS Store Bot is running...")
-    app.run_polling()
