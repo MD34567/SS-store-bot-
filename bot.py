@@ -1,3 +1,4 @@
+import imghdr
 import telegram
 print(telegram.__version__)
 from typing import Final
