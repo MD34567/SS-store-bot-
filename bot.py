@@ -3,11 +3,10 @@ print(telegram.__version__)
 from typing import Final
 from telegram import Update
 from telegram.ext import (
-    ApplicationBuilder,
+    Updater,
     CommandHandler,
     ContextTypes,
 )
-
 TOKEN: Final = "8974256027:AAGfsQ4rtRP9Nmi7f-ZtFIBbHxcR_ZOZhf0"
 BOT_USERNAME: Final = "@SS2_Store_bot"
 
@@ -161,16 +160,15 @@ async def error(update: object, context: ContextTypes.DEFAULT_TYPE):
 
 
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("products", products_command))
-    app.add_handler(CommandHandler("order", order_command))
-    app.add_handler(CommandHandler("cart", cart_command))
-    app.add_handler(CommandHandler("checkout", checkout_command))
-
-    app.add_error_handler(error)
-
-    print("SS Store Bot is running...")
-    app.run_polling()
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
+    
+    dp.add_handler(CommandHandler("start", start_command))
+    dp.add_handler(CommandHandler("help", help_command))
+    dp.add_handler(CommandHandler("products", products_command))
+    dp.add_handler(CommandHandler("order", order_command))
+    dp.add_handler(CommandHandler("cart", cart_command))
+    dp.add_handler(CommandHandler("checkout", checkout_command))
+    
+    updater.start_polling()
+    updater.idle()
